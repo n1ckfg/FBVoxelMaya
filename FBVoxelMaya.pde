@@ -7,16 +7,20 @@ void setup(){
 
 class FBVoxel {
 
-  ArrayList p, c;
+  ArrayList p, c, ci;
   Data input;
   Data output;
+  Data mayaHeader;
 
   FBVoxel(String _s) {
     p = new ArrayList();
     c = new ArrayList();
+    ci = new ArrayList();
     input = new Data();
     output = new Data();
+    mayaHeader = new Data();
 
+    //1.  Parse input file.    
     try {
       input.load(_s);
       for (int i=0;i<input.data.length;i++) {
@@ -31,26 +35,44 @@ class FBVoxel {
       println("Couldn't load input file.");
     }
     
+    //2.  Generate output file.
     try{
-    output.beginSave();
-    output.add("from maya.cmds import *");
-    output.add("");
-    for(int i=0;i<p.size();i++){
-      output.add("polyCube()");
-      //~~
-      PVector pp = (PVector) p.get(i);
-      output.add("move(" + int(pp.x) + "," + int(pp.y) + "," + int(pp.z) + ")");
-      //~~
-      color cc = getColor(c,i);
-      int a = (cc >> 24) & 0xFF;
-      int r = (cc >> 16) & 0xFF;
-      int g = (cc >> 8) & 0xFF;
-      int b = cc & 0xFF;
-      //placeholder for a real Maya Python materials command
-      //output.add("color(" + r + "," + g + "," + b + "," + a + ")");
-      //~~      
-    }    
-    output.endSave("tree.py");
+      output.beginSave();
+      //Maya functions
+      mayaHeader.load("mayaHeader.py");
+      for(int i=0;i<mayaHeader.data.length;i++){
+        output.add(mayaHeader.data[i]);
+      }
+      output.add("");
+      //create shaders
+      ArrayList shaders = new ArrayList();
+      for(int i=0;i<c.size();i++){
+        color cc = getColor(c,i);
+        int a = (cc >> 24) & 0xFF;
+        int r = (cc >> 16) & 0xFF;
+        int g = (cc >> 8) & 0xFF;
+        int b = cc & 0xFF;
+        //~~
+        String s = "shader" + (i+1);
+        shaders.add(s);
+        output.add(s + " = createShader(\"blinn\",["+r+","+g+","+b+","+a+"],False)");
+        println(s);
+      }
+      output.add("");
+      //~~  
+      for(int i=0;i<p.size();i++){
+        output.add("polyCube()");
+        //~~
+        PVector pp = (PVector) p.get(i);
+        output.add("move(" + int(pp.x) + "," + int(pp.y) + "," + int(pp.z) + ")");
+        //~~
+        int index = (Integer) ci.get(i);
+        //placeholder for a real Maya Python materials command
+        String s = (String) shaders.get(index);
+        output.add("assignShader("+ s +")");
+        //~~      
+      }    
+      output.endSave("tree.py");
     }catch(Exception e){
       println("Couldn't write output file.");
     }
@@ -85,11 +107,24 @@ class FBVoxel {
     }
     pp = setPVector(sp);
     cc = setColor(sc);
-    c.add(cc);
+    int index = 0;
+    boolean match = false;
+    for(int k=0;k<c.size();k++){
+      color x = getColor(c,k);
+      if(cc==x){
+        match=true;
+        index=k;
+      }
+    }
+    if(!match){
+      c.add(cc);
+      index = c.size()-1;
+    }
+    ci.add(index);
     p.add(pp);  
   }
 
-  //~~~~   utilities   ~~~~
+  //~~~~   utilities   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   int setInt(String _s) {
     return int(_s);
