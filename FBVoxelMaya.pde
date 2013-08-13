@@ -1,3 +1,5 @@
+boolean shaderPerVoxel = false;
+
 FBVoxel voxel;
 
 void setup(){
@@ -46,17 +48,35 @@ class FBVoxel {
       output.add("");
       //create shaders
       ArrayList shaders = new ArrayList();
-      for(int i=0;i<c.size();i++){
-        color cc = getColor(c,i);
-        int a = (cc >> 24) & 0xFF;
-        int r = (cc >> 16) & 0xFF;
-        int g = (cc >> 8) & 0xFF;
-        int b = cc & 0xFF;
-        //~~
-        String s = "shader" + (i+1);
-        shaders.add(s);
-        output.add(s + " = createShader(\"blinn\",["+r+","+g+","+b+","+a+"],False)");
-        println(s);
+      if(shaderPerVoxel){
+        //looks up colors using the index arraylist
+        for(int i=0;i<ci.size();i++){
+          int index = (Integer) ci.get(i);
+          color cc = getColor(c,index);
+          int a = (cc >> 24) & 0xFF;
+          int r = (cc >> 16) & 0xFF;
+          int g = (cc >> 8) & 0xFF;
+          int b = cc & 0xFF;
+          //~~
+          String s = "shader" + (i+1);
+          shaders.add(s);
+          output.add(s + " = createShader(\"blinn\",["+r+","+g+","+b+","+a+"],False)");
+          println(s);
+        }
+      }else{
+        //looks up colors using the index arraylist
+        for(int i=0;i<c.size();i++){
+          color cc = getColor(c,i);
+          int a = (cc >> 24) & 0xFF;
+          int r = (cc >> 16) & 0xFF;
+          int g = (cc >> 8) & 0xFF;
+          int b = cc & 0xFF;
+          //~~
+          String s = "shader" + (i+1);
+          shaders.add(s);
+          output.add(s + " = createShader(\"blinn\",["+r+","+g+","+b+","+a+"],False)");
+          println(s);
+        }
       }
       output.add("");
       //~~  
