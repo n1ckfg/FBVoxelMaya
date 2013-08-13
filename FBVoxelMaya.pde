@@ -1,9 +1,8 @@
-boolean shaderPerVoxel = false;
-
 FBVoxel voxel;
 
 void setup(){
-  voxel = new FBVoxel("tree.txt");
+  voxel = new FBVoxel("tree.txt","tree.py",false);
+  voxel = new FBVoxel("tree.txt","tree-pervoxel.py",true);
   exit();
 }
 
@@ -13,15 +12,17 @@ class FBVoxel {
   Data input;
   Data output;
   Data mayaHeader;
+  boolean shaderPerVoxel = false;
 
-  FBVoxel(String _s) {
+  FBVoxel(String _s, String _output, boolean _spv) {
     p = new ArrayList();
     c = new ArrayList();
     ci = new ArrayList();
     input = new Data();
     output = new Data();
     mayaHeader = new Data();
-
+    shaderPerVoxel = _spv;
+    
     //1.  Parse input file.    
     try {
       input.load(_s);
@@ -49,7 +50,7 @@ class FBVoxel {
       //create shaders
       ArrayList shaders = new ArrayList();
       if(shaderPerVoxel){
-        //looks up colors using the index arraylist
+        //each voxel gets its own shader
         for(int i=0;i<ci.size();i++){
           int index = (Integer) ci.get(i);
           color cc = getColor(c,index);
@@ -64,7 +65,7 @@ class FBVoxel {
           println(s);
         }
       }else{
-        //looks up colors using the index arraylist
+        //voxels of the same color share the same shader
         for(int i=0;i<c.size();i++){
           color cc = getColor(c,i);
           int a = (cc >> 24) & 0xFF;
@@ -86,13 +87,19 @@ class FBVoxel {
         PVector pp = (PVector) p.get(i);
         output.add("move(" + int(pp.x) + "," + int(pp.y) + "," + int(pp.z) + ")");
         //~~
-        int index = (Integer) ci.get(i);
-        //placeholder for a real Maya Python materials command
-        String s = (String) shaders.get(index);
-        output.add("assignShader("+ s +")");
+        if(shaderPerVoxel){
+          //each voxel gets its own shader
+          String s = (String) shaders.get(i);
+          output.add("assignShader("+ s +")");
+        }else{
+          //voxels of the same color share the same shader
+          int index = (Integer) ci.get(i);
+          String s = (String) shaders.get(index);
+          output.add("assignShader("+ s +")");
+        }
         //~~      
       }    
-      output.endSave("tree.py");
+      output.endSave(_output);
     }catch(Exception e){
       println("Couldn't write output file.");
     }
