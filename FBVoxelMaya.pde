@@ -1,51 +1,95 @@
-Voxel voxel;
-ArrayList pos;
-Data maya;
+FBVoxel voxel;
 
 void setup(){
-  pos = new ArrayList();
-  maya = new Data();
-  maya.beginSave();
-  maya.add("from maya.cmds import *");
-  maya.add("");
-  voxel = new Voxel("tree.txt");
-  maya.endSave("tree.py");
+  voxel = new FBVoxel("tree.txt");
   exit();
 }
 
-class Voxel {
+class FBVoxel {
 
-  Data voxel;
+  ArrayList p, c;
+  Data input;
+  Data output;
 
-  Voxel(String _s) {
+  FBVoxel(String _s) {
+    p = new ArrayList();
+    c = new ArrayList();
+    input = new Data();
+    output = new Data();
+
     try {
-      voxel = new Data();
-      voxel.load(_s);
-      for (int i=0;i<voxel.data.length;i++) {
+      input.load(_s);
+      for (int i=0;i<input.data.length;i++) {
         try{
-          String curLine = voxel.data[i];
+          String curLine = input.data[i];
           if(curLine.charAt(0)!=char('#')){
-            int spaceCounter = 0;
-            maya.add("polyCube()");
-            String pos = "move(";
-            for(int j=0;j<curLine.length();j++){
-              if(spaceCounter<3){
-                if(curLine.charAt(j)==char(' ')){
-                  if(spaceCounter<2) pos += ",";
-                  spaceCounter++;
-                }else{
-                  pos += curLine.charAt(j);
-                }
-              }
-            }
-          maya.add(pos + ")");
+            extractData(curLine);
           }
         }catch(Exception e){ }
       }
     }catch(Exception e) {
-      println("Couldn't load voxel file.");
+      println("Couldn't load input file.");
+    }
+    
+    try{
+    output.beginSave();
+    output.add("from maya.cmds import *");
+    output.add("");
+    for(int i=0;i<p.size();i++){
+      output.add("polyCube()");
+      //~~
+      PVector pp = (PVector) p.get(i);
+      output.add("move(" + int(pp.x) + "," + int(pp.y) + "," + int(pp.z) + ")");
+      //~~
+      color cc = getColor(c,i);
+      int a = (cc >> 24) & 0xFF;
+      int r = (cc >> 16) & 0xFF;
+      int g = (cc >> 8) & 0xFF;
+      int b = cc & 0xFF;
+      //placeholder for a real Maya Python materials command
+      //output.add("color(" + r + "," + g + "," + b + "," + a + ")");
+      //~~      
+    }    
+    output.endSave("tree.py");
+    }catch(Exception e){
+      println("Couldn't write output file.");
     }
   }
+
+  color getColor(ArrayList _c, int _id){
+     return (color)(Integer) _c.get(_id);
+  }
+  
+  void extractData(String curLine){
+    int spaceCounter = 0;
+    String sp = "";
+    String sc = "";
+    color cc =color(0);
+    PVector pp = new PVector(0,0,0);
+    for(int j=0;j<curLine.length();j++){
+      if(spaceCounter<3){
+        if(curLine.charAt(j)==char(' ')){
+          if(spaceCounter<2) sp += ",";
+          spaceCounter++;
+        }else{
+          sp += curLine.charAt(j);
+        }
+      }else{
+        if(curLine.charAt(j)==char(' ')){
+          if(spaceCounter<6) sc += ",";
+          spaceCounter++;
+        }else{
+          sc += curLine.charAt(j);
+        }
+      }
+    }
+    pp = setPVector(sp);
+    cc = setColor(sc);
+    c.add(cc);
+    p.add(pp);  
+  }
+
+  //~~~~   utilities   ~~~~
 
   int setInt(String _s) {
     return int(_s);
